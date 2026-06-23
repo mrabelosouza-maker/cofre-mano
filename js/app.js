@@ -206,20 +206,40 @@ function persistSettings(patch) {
 
 // ---------------- Auth (Supabase) ----------------
 function setupAuth() {
-  $("auth-form").addEventListener("submit", async (ev) => {
-    ev.preventDefault();
+  const submit = async (mode) => {
     const email = $("auth-email").value.trim();
+    const password = $("auth-password").value;
     const msg = $("auth-msg");
+    if (!email || password.length < 6) {
+      msg.textContent = "Informe e-mail e senha (mín. 6 caracteres).";
+      msg.className = "auth-msg is-err";
+      return;
+    }
+    msg.textContent = mode === "signup" ? "Criando conta…" : "Entrando…";
+    msg.className = "auth-msg";
     try {
-      await store.signIn(email);
-      msg.textContent = "Link enviado! Confira seu e-mail e abra o link neste aparelho.";
-      msg.className = "auth-msg is-ok";
+      if (mode === "signup") await store.signUp(email, password);
+      else await store.signIn(email, password);
+      showApp();
+      await refresh();
+      goto("painel");
     } catch (err) {
-      msg.textContent = "Erro: " + (err.message || err);
+      msg.textContent = friendlyAuthError(err);
       msg.className = "auth-msg is-err";
     }
-  });
+  };
+  $("auth-form").addEventListener("submit", (ev) => { ev.preventDefault(); submit("signin"); });
+  $("btn-signup").addEventListener("click", () => submit("signup"));
   $("btn-signout").onclick = () => store.signOut();
+}
+
+function friendlyAuthError(err) {
+  const m = (err.message || String(err)).toLowerCase();
+  if (m.includes("invalid login")) return "E-mail ou senha incorretos. Primeira vez? Toque em “Criar conta”.";
+  if (m.includes("already registered") || m.includes("user already")) return "Esse e-mail já tem conta. Toque em “Entrar”.";
+  if (m.includes("signups not allowed") || m.includes("not allowed")) return "Cadastro desativado no Supabase (Authentication → Providers → Email).";
+  if (m.includes("vinculado a um cofre")) return "Esse e-mail não está liberado no cofre. Confira se digitou o e-mail cadastrado.";
+  return "Erro: " + (err.message || err);
 }
 
 function showApp() {
@@ -269,11 +289,6 @@ async function main() {
 
   try {
     const { needsAuth } = await store.init();
-    // Trata retorno do magic link (token na URL).
-    if (needsAuth && (location.hash.includes("access_token") || location.search.includes("code="))) {
-      const ok = await store.handleAuthCallback();
-      if (ok) { history.replaceState(null, "", location.pathname); showApp(); await refresh(); return; }
-    }
     if (needsAuth) { showAuth(); return; }
     showApp();
     await refresh();

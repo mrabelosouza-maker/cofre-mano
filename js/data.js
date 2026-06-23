@@ -133,23 +133,25 @@ export const store = {
     return { needsAuth: false };
   },
 
-  async signIn(email) {
-    const { error } = await sb.auth.signInWithOtp({
-      email, options: { emailRedirectTo: window.location.href.split("#")[0] },
-    });
+  async signIn(email, password) {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    await this._afterAuth(data.user);
+  },
+
+  async signUp(email, password) {
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) throw error;
+    if (!data.session) {
+      // Confirmação por e-mail ainda ligada no Supabase.
+      throw new Error("Conta criada, mas falta confirmar por e-mail. Peça pra desligar 'Confirm email' no Supabase e tente Entrar.");
+    }
+    await this._afterAuth(data.user);
   },
 
   async signOut() {
     if (sb) await sb.auth.signOut();
     window.location.reload();
-  },
-
-  async handleAuthCallback() {
-    if (this.mode !== "supabase") return false;
-    const { data } = await sb.auth.getSession();
-    if (data.session) { await this._afterAuth(data.session.user); return true; }
-    return false;
   },
 
   async _afterAuth(user) {

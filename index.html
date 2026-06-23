@@ -17,11 +17,14 @@
         <span class="brand__mark">🐷</span>
         <span class="brand__name">Cofre do Mano</span>
       </div>
-      <p class="auth-sub">Entre com seu e-mail para acessar o cofre compartilhado.</p>
+      <p class="auth-sub">Entre com seu e-mail e senha. Primeira vez? Crie sua conta.</p>
       <form id="auth-form" class="auth-form">
         <input id="auth-email" type="email" inputmode="email" autocomplete="email"
                placeholder="seu@email.com" required />
-        <button type="submit" class="btn btn--primary btn--block">Receber link de acesso</button>
+        <input id="auth-password" type="password" autocomplete="current-password"
+               placeholder="senha (mín. 6 caracteres)" minlength="6" required />
+        <button type="submit" class="btn btn--primary btn--block">Entrar</button>
+        <button type="button" id="btn-signup" class="btn btn--ghost btn--block">Criar conta (primeira vez)</button>
       </form>
       <p id="auth-msg" class="auth-msg" role="status"></p>
     </div>
