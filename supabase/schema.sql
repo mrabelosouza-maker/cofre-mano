@@ -78,7 +78,7 @@ alter publication supabase_realtime add table entries;
 do $$
 declare hh uuid;
   email_voce  text := 'mrabelo.souza@gmail.com';
-  email_irmao text := null;  -- coloque o e-mail do seu irmão aqui (entre aspas) quando tiver
+  email_irmao text := 'jkita1191@gmail.com';
 begin
   select id into hh from households order by created_at limit 1;
   if hh is null then
