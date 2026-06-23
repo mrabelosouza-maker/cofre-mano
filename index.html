@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0f1a" />
+  <title>Cofre do Mano</title>
+  <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'&gt;&lt;text y='.9em' font-size='90'&gt;🐷&lt;/text&gt;&lt;/svg&gt;" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- Overlay de login (somente no modo Supabase) -->
+  <div id="auth-overlay" class="auth-overlay" hidden>
+    <div class="auth-card">
+      <div class="brand brand--big">
+        <span class="brand__mark">🐷</span>
+        <span class="brand__name">Cofre do Mano</span>
+      </div>
+      <p class="auth-sub">Entre com seu e-mail para acessar o cofre compartilhado.</p>
+      <form id="auth-form" class="auth-form">
+        <input id="auth-email" type="email" inputmode="email" autocomplete="email"
+               placeholder="seu@email.com" required />
+        <button type="submit" class="btn btn--primary btn--block">Receber link de acesso</button>
+      </form>
+      <p id="auth-msg" class="auth-msg" role="status"></p>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app" class="app" hidden>
+    <header class="appbar">
+      <div class="brand">
+        <span class="brand__mark">🐷</span>
+        <span class="brand__name">Cofre do Mano</span>
+      </div>
+      <div class="appbar__right">
+        <span id="mode-badge" class="badge" title="Como os dados estão sendo guardados"></span>
+        <button id="btn-signout" class="icon-btn" title="Sair" hidden>⎋</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- PAINEL -->
+      <section id="view-painel" class="view" data-view="painel">
+        <div class="hero">
+          <p class="hero__label">Saldo no cofre</p>
+          <p id="hero-balance" class="hero__value">R$ 0,00</p>
+          <p class="hero__hint">É quanto do dinheiro dele está com você agora.</p>
+          <div class="hero__streak">
+            <span class="flame">🔥</span>
+            <span><b id="streak-days">0</b> <span id="streak-label">dias seguidos poupando</span></span>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi kpi--in">
+            <p class="kpi__label">Total enviado</p>
+            <p id="kpi-deposit" class="kpi__value">R$ 0,00</p>
+          </div>
+          <div class="kpi kpi--out">
+            <p class="kpi__label">Total devolvido</p>
+            <p id="kpi-withdraw" class="kpi__value">R$ 0,00</p>
+          </div>
+          <div class="kpi">
+            <p class="kpi__label">Ele gastou</p>
+            <p id="kpi-spend" class="kpi__value">R$ 0,00</p>
+          </div>
+          <div class="kpi">
+            <p class="kpi__label">Taxa de poupança</p>
+            <p id="kpi-rate" class="kpi__value">—</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__head">
+            <h2>Saldo ao longo do tempo</h2>
+          </div>
+          <div class="chart-box chart-box--sm">
+            <canvas id="chart-balance-mini"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__head">
+            <h2>Últimos lançamentos</h2>
+            <button class="link" data-goto="lancar">+ Novo</button>
+          </div>
+          <ul id="recent-list" class="entry-list"></ul>
+        </div>
+      </section>
+
+      <!-- LANÇAR -->
+      <section id="view-lancar" class="view" data-view="lancar" hidden>
+        <div class="card">
+          <div class="card__head"><h2>Novo lançamento</h2></div>
+          <form id="entry-form" class="entry-form">
+            <div class="seg" role="tablist" aria-label="Tipo de lançamento">
+              <button type="button" class="seg__btn is-active" data-type="deposit">Enviei pra poupar</button>
+              <button type="button" class="seg__btn" data-type="spend">Gastei</button>
+              <button type="button" class="seg__btn" data-type="withdrawal">Devolução</button>
+            </div>
+            <input type="hidden" id="entry-type" value="deposit" />
+
+            <label class="field">
+              <span class="field__label">Valor</span>
+              <div class="money-input">
+                <span class="money-input__prefix">R$</span>
+                <input id="entry-amount" inputmode="decimal" placeholder="0,00" autocomplete="off" required />
+              </div>
+            </label>
+
+            <label class="field">
+              <span class="field__label">Data</span>
+              <input id="entry-date" type="date" required />
+            </label>
+
+            <label class="field">
+              <span class="field__label">Observação <span class="muted">(opcional)</span></span>
+              <input id="entry-note" type="text" maxlength="120" placeholder="Ex.: diária da obra" autocomplete="off" />
+            </label>
+
+            <button type="submit" class="btn btn--primary btn--block">Salvar lançamento</button>
+            <p id="entry-msg" class="form-msg" role="status"></p>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card__head"><h2>Histórico</h2></div>
+          <ul id="full-list" class="entry-list"></ul>
+        </div>
+      </section>
+
+      <!-- GRÁFICOS -->
+      <section id="view-graficos" class="view" data-view="graficos" hidden>
+        <div class="card">
+          <div class="card__head">
+            <h2>Saldo acumulado</h2>
+          </div>
+          <div class="chart-box"><canvas id="chart-balance"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card__head">
+            <h2>Enviado por período</h2>
+            <div class="seg seg--sm" role="tablist">
+              <button type="button" class="seg__btn is-active" data-grain="day">Dia</button>
+              <button type="button" class="seg__btn" data-grain="week">Semana</button>
+              <button type="button" class="seg__btn" data-grain="month">Mês</button>
+            </div>
+          </div>
+          <div class="chart-box"><canvas id="chart-bars"></canvas></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card__head"><h2>Enviado × Gasto</h2></div>
+            <div class="chart-box"><canvas id="chart-compare"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card__head"><h2>Poupado × Gasto</h2></div>
+            <div class="chart-box"><canvas id="chart-donut"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIMULADOR -->
+      <section id="view-simulador" class="view" data-view="simulador" hidden>
+        <div class="card">
+          <div class="card__head"><h2>Meta do mês</h2></div>
+          <p class="muted">Quanto você quer ter no cofre no fim deste mês?</p>
+          <label class="field">
+            <span class="field__label">Meta (R$)</span>
+            <div class="money-input">
+              <span class="money-input__prefix">R$</span>
+              <input id="sim-target" inputmode="decimal" placeholder="0,00" autocomplete="off" />
+            </div>
+          </label>
+          <div class="result" id="sim-perday-result">
+            <p class="result__label">Pra bater a meta, é preciso poupar por dia:</p>
+            <p class="result__value" id="sim-perday">—</p>
+            <p class="result__hint" id="sim-perday-hint"></p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__head"><h2>E se eu poupar por dia…</h2></div>
+          <label class="field">
+            <span class="field__label">Valor diário (R$)</span>
+            <div class="money-input">
+              <span class="money-input__prefix">R$</span>
+              <input id="sim-perday-input" inputmode="decimal" placeholder="0,00" autocomplete="off" />
+            </div>
+          </label>
+          <div class="result">
+            <p class="result__label">Você termina o mês com:</p>
+            <p class="result__value" id="sim-endmonth">—</p>
+          </div>
+          <div class="chart-box chart-box--sm"><canvas id="chart-projection"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="card__head"><h2>Meta de longo prazo</h2></div>
+          <label class="field">
+            <span class="field__label">Objetivo final (R$)</span>
+            <div class="money-input">
+              <span class="money-input__prefix">R$</span>
+              <input id="sim-goal" inputmode="decimal" placeholder="0,00" autocomplete="off" />
+            </div>
+          </label>
+          <div class="result">
+            <p class="result__label">No ritmo médio atual, você atinge em:</p>
+            <p class="result__value" id="sim-eta">—</p>
+            <p class="result__hint" id="sim-eta-hint"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONQUISTAS -->
+      <section id="view-conquistas" class="view" data-view="conquistas" hidden>
+        <div class="card piggy-card">
+          <div class="card__head"><h2>Cofrinho</h2></div>
+          <div class="piggy">
+            <svg id="piggy-svg" viewBox="0 0 200 160" class="piggy__svg" aria-hidden="true"></svg>
+            <div class="piggy__meta">
+              <p class="piggy__pct"><b id="piggy-pct">0%</b> da meta</p>
+              <div class="progress"><div id="piggy-bar" class="progress__fill"></div></div>
+              <p class="piggy__nums"><span id="piggy-now">R$ 0,00</span> de <span id="piggy-goal">R$ 0,00</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__head">
+            <h2>Ofensiva</h2>
+          </div>
+          <div class="streak-big">
+            <span class="flame flame--big">🔥</span>
+            <div>
+              <p class="streak-big__days"><b id="streak-big-days">0</b> <span id="streak-big-label">dias</span></p>
+              <p class="muted">Recorde: <b id="streak-record">0</b> dias</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__head"><h2>Medalhas</h2></div>
+          <div id="medals" class="medals"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Navegação -->
+    <nav class="tabbar">
+      <button class="tab is-active" data-view="painel"><span class="tab__ico">📊</span><span>Painel</span></button>
+      <button class="tab" data-view="lancar"><span class="tab__ico">➕</span><span>Lançar</span></button>
+      <button class="tab" data-view="graficos"><span class="tab__ico">📈</span><span>Gráficos</span></button>
+      <button class="tab" data-view="simulador"><span class="tab__ico">🎯</span><span>Simular</span></button>
+      <button class="tab" data-view="conquistas"><span class="tab__ico">🏆</span><span>Conquistas</span></button>
+    </nav>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
